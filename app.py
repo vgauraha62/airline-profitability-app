@@ -5,6 +5,9 @@ from utils.model_utils import initialize_models, train_model, predict
 from utils.plot_utils import create_plot
 from utils.data_utils import load_data, preprocess_data, get_feature_groups
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from sklearn.model_selection import cross_val_score
+import numpy as np
 
 # Page configuration
 st.set_page_config(
@@ -112,6 +115,8 @@ def main():
         # Model Comparison Section
         st.header("Model Comparison")
         model_metrics = []
+        feature_importance_data = {}
+        cv_scores = {}
 
         for selected_model in selected_models:
             model_key = f"{model_options[selected_model]}_{','.join(selected_features)}"
@@ -128,14 +133,29 @@ def main():
 
                 model = st.session_state.trained_models[model_key]
                 metrics = model.get_metrics()
+
+                # Cross-validation scores
+                cv_scores[selected_model] = cross_val_score(
+                    model.model, X[selected_features], y, cv=5, scoring='r2'
+                )
+
+                # Feature importance
+                if hasattr(model.model, 'feature_importances_'):
+                    importance = model.model.feature_importances_
+                else:
+                    importance = np.abs(model.model.coef_)
+                feature_importance_data[selected_model] = dict(zip(selected_features, importance))
+
+                # Expanded metrics
                 model_metrics.append({
                     'Model': selected_model,
                     'R² Score': metrics['r2'],
                     'MAE': metrics['mae'],
-                    'RMSE': metrics['rmse']
+                    'RMSE': metrics['rmse'],
+                    'CV R² (mean)': cv_scores[selected_model].mean(),
+                    'CV R² (std)': cv_scores[selected_model].std()
                 })
 
-                # Generate predictions for later export
                 predictions = model.predict(X[selected_features])
                 st.session_state.current_predictions = predictions
 
@@ -143,27 +163,101 @@ def main():
                 st.error(f"Error in {selected_model} training: {str(model_error)}")
                 continue
 
-        # Display model comparison
         if model_metrics:
+            # Create subplots for comprehensive comparison
+            fig = make_subplots(
+                rows=2, cols=2,
+                subplot_titles=(
+                    'Performance Metrics Comparison',
+                    'Feature Importance by Model',
+                    'Cross-validation Scores Distribution',
+                    'Prediction Error Distribution'
+                )
+            )
+
+            # 1. Performance Metrics Bar Chart
             metrics_df = pd.DataFrame(model_metrics)
-            fig = go.Figure(data=[
-                go.Bar(name=metric, x=metrics_df['Model'], y=metrics_df[metric])
-                for metric in ['R² Score', 'MAE', 'RMSE']
-            ])
+            for metric in ['R² Score', 'MAE', 'RMSE']:
+                fig.add_trace(
+                    go.Bar(name=metric, x=metrics_df['Model'], y=metrics_df[metric]),
+                    row=1, col=1
+                )
+
+            # 2. Feature Importance Comparison
+            for model_name, importances in feature_importance_data.items():
+                fig.add_trace(
+                    go.Bar(
+                        name=model_name,
+                        x=list(importances.keys()),
+                        y=list(importances.values())
+                    ),
+                    row=1, col=2
+                )
+
+            # 3. Cross-validation Scores
+            for model_name, scores in cv_scores.items():
+                fig.add_trace(
+                    go.Box(name=model_name, y=scores, boxpoints='all'),
+                    row=2, col=1
+                )
+
+            # 4. Prediction Error Distribution
+            for selected_model in selected_models:
+                model = st.session_state.trained_models[f"{model_options[selected_model]}_{','.join(selected_features)}"]
+                predictions = model.predict(X[selected_features])
+                errors = y - predictions
+                fig.add_trace(
+                    go.Histogram(
+                        name=selected_model,
+                        x=errors,
+                        opacity=0.7,
+                        nbinsx=30
+                    ),
+                    row=2, col=2
+                )
+
+            # Update layout
             fig.update_layout(
-                title='Model Performance Comparison',
-                barmode='group',
+                height=800,
+                title_text="Comprehensive Model Comparison",
+                showlegend=True,
                 template='plotly_white'
             )
             st.plotly_chart(fig, use_container_width=True)
 
-            # Aviation insights based on model performance
-            best_model = metrics_df.loc[metrics_df['R² Score'].idxmax(), 'Model']
+            # Detailed insights
+            st.subheader("Model Performance Analysis")
+
+            # Best model identification
+            best_r2_model = metrics_df.loc[metrics_df['R² Score'].idxmax()]
+            best_mae_model = metrics_df.loc[metrics_df['MAE'].idxmin()]
+
             st.info(f"""
-            💡 **Model Performance Insights:**
-            - {best_model} shows the best performance with an R² score of {metrics_df['R² Score'].max():.3f}
-            - This indicates that {metrics_df['R² Score'].max()*100:.1f}% of the variance in profit can be explained by the selected features
-            - The model's predictions have an average error of ${metrics_df['MAE'].min():,.2f}
+            💡 **Key Model Insights:**
+
+            Best Overall Performance:
+            - {best_r2_model['Model']} achieves the highest R² score of {best_r2_model['R² Score']:.3f}
+            - This means it explains {best_r2_model['R² Score']*100:.1f}% of the variance in profit predictions
+
+            Prediction Accuracy:
+            - {best_mae_model['Model']} has the lowest Mean Absolute Error of ${best_mae_model['MAE']:,.2f}
+            - Cross-validation shows model stability with R² variation of ±{best_r2_model['CV R² (std)']:.3f}
+
+            Feature Impact Analysis:
+            {get_feature_impact_insights(feature_importance_data)}
+            """)
+
+            # Aviation-specific insights
+            st.info(f"""
+            💡 **Aviation Business Insights:**
+
+            Revenue Optimization:
+            - The model suggests focusing on {get_top_features(feature_importance_data)} for maximum profit impact
+            - Consider these factors when planning route optimization and pricing strategies
+
+            Operational Recommendations:
+            - Based on feature importance, prioritize {get_operational_recommendations(feature_importance_data)}
+            - Monitor these metrics closely for better profit prediction and optimization
             """)
 
         # Feature Insights
@@ -240,6 +334,45 @@ def main():
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
         st.error("Please refresh the page and try again.")
+
+def get_feature_impact_insights(importance_data):
+    # Get the average importance across all models for each feature
+    avg_importance = {}
+    for model_imps in importance_data.values():
+        for feature, imp in model_imps.items():
+            avg_importance[feature] = avg_importance.get(feature, 0) + imp
+
+    avg_importance = {k: v/len(importance_data) for k, v in avg_importance.items()}
+    sorted_features = sorted(avg_importance.items(), key=lambda x: x[1], reverse=True)
+
+    insights = []
+    for feature, importance in sorted_features[:3]:
+        insights.append(f"- {feature} shows consistent importance across models (avg. impact: {importance:.3f})")
+
+    return "\n".join(insights)
+
+def get_top_features(importance_data):
+    avg_importance = {}
+    for model_imps in importance_data.values():
+        for feature, imp in model_imps.items():
+            avg_importance[feature] = avg_importance.get(feature, 0) + imp
+
+    sorted_features = sorted(avg_importance.items(), key=lambda x: x[1], reverse=True)
+    return ", ".join(f"{feature}" for feature, _ in sorted_features[:2])
+
+def get_operational_recommendations(importance_data):
+    operational_features = [
+        'Load Factor (%)', 'Aircraft Utilization (Hours/Day)', 
+        'Fleet Availability (%)', 'Fuel Efficiency (ASK)'
+    ]
+
+    relevant_features = []
+    for feature in operational_features:
+        if any(feature in model_imps for model_imps in importance_data.values()):
+            relevant_features.append(feature)
+
+    return ", ".join(relevant_features[:2])
+
 
 if __name__ == "__main__":
     main()
