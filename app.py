@@ -29,105 +29,145 @@ def main():
     st.sidebar.header("Configuration")
 
     try:
+        # Load data if not already loaded
         if st.session_state.raw_data is None:
             with st.spinner("Loading data..."):
                 data = load_data()
-                st.session_state.raw_data = data
+                if data is not None:
+                    st.session_state.raw_data = data
+                else:
+                    st.error("Failed to load data. Please check the data source.")
+                    return
 
         data = st.session_state.raw_data
-        if data is not None:
-            X, y = preprocess_data(data)
+        X, y = preprocess_data(data)
 
-            # Feature group selection
-            feature_groups = get_feature_groups()
-            selected_group = st.sidebar.selectbox(
-                "Select Feature Group",
-                ["All Features"] + list(feature_groups.keys())
-            )
+        # Feature group selection
+        feature_groups = get_feature_groups()
+        selected_group = st.sidebar.selectbox(
+            "Select Feature Group",
+            ["All Features"] + list(feature_groups.keys())
+        )
 
-            if selected_group == "All Features":
-                available_features = X.columns.tolist()
-            else:
-                available_features = [f for f in feature_groups[selected_group] if f in X.columns]
+        if selected_group == "All Features":
+            available_features = X.columns.tolist()
+        else:
+            available_features = [f for f in feature_groups[selected_group] if f in X.columns]
 
-            selected_features = st.sidebar.multiselect(
-                "Select Features",
-                available_features,
-                default=available_features[:3]
-            )
+        selected_features = st.sidebar.multiselect(
+            "Select Features",
+            available_features,
+            default=available_features[:3] if available_features else []
+        )
 
-            # Model selection
-            model_options = {
-                "Linear Regression": "lr",
-                "Random Forest": "rf",
-                "XGBoost": "xgb"
-            }
-            selected_model = st.sidebar.selectbox(
-                "Select Model",
-                list(model_options.keys())
-            )
+        # Model selection
+        model_options = {
+            "Linear Regression": "lr",
+            "Random Forest": "rf",
+            "XGBoost": "xgb"
+        }
+        selected_model = st.sidebar.selectbox(
+            "Select Model",
+            list(model_options.keys())
+        )
 
-            # Plot selection
-            plot_options = [
-                "Feature Importance",
-                "Prediction vs Actual",
-                "Residual Plot",
-                "Learning Curve",
-                "Performance Metrics",
-                "Feature Correlation Matrix",
-                "Revenue Correlation",
-                "Load Factor Analysis",
-                "Delay Analysis"
-            ]
-            selected_plot = st.sidebar.selectbox(
-                "Select Plot Type",
-                plot_options
-            )
+        # Plot selection
+        plot_options = [
+            "Feature Importance",
+            "Prediction vs Actual",
+            "Residual Plot",
+            "Learning Curve",
+            "Performance Metrics",
+            "Feature Correlation Matrix",
+            "Revenue Correlation",
+            "Load Factor Analysis",
+            "Delay Analysis"
+        ]
+        selected_plot = st.sidebar.selectbox(
+            "Select Plot Type",
+            plot_options
+        )
 
-            # Main content area
-            col1, col2 = st.columns([2, 1])
+        # Main content
+        if not selected_features:
+            st.warning("Please select at least one feature to begin analysis.")
+            return
 
-            with col1:
-                st.subheader("Model Visualization")
-                if selected_features and selected_model:
-                    # Train model if needed
-                    model_key = f"{model_options[selected_model]}_{','.join(selected_features)}"
-                    if model_key not in st.session_state.trained_models:
-                        with st.spinner("Training model..."):
-                            model = train_model(
-                                X[selected_features],
-                                y,
-                                model_type=model_options[selected_model]
-                            )
-                            st.session_state.trained_models[model_key] = model
+        # Performance Metrics Section at the top
+        st.header("Model Performance Metrics")
+        metrics_cols = st.columns(3)
 
-                    # Create and display plot
+        # Initialize metrics as None
+        metrics = None
+
+        if selected_features and selected_model:
+            # Train model if needed
+            model_key = f"{model_options[selected_model]}_{','.join(selected_features)}"
+
+            try:
+                if model_key not in st.session_state.trained_models:
+                    with st.spinner("Training model..."):
+                        model = train_model(
+                            X[selected_features],
+                            y,
+                            model_type=model_options[selected_model]
+                        )
+                        st.session_state.trained_models[model_key] = model
+
+                model = st.session_state.trained_models[model_key]
+                metrics = model.get_metrics()
+
+                # Display metrics in large format
+                with metrics_cols[0]:
+                    st.metric("R² Score", f"{metrics['r2']:.3f}")
+                    st.markdown(f"""
+                        <div style='text-align: center; font-size: 0.8em;'>
+                            Explains {metrics['r2']*100:.1f}% of variance
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                with metrics_cols[1]:
+                    st.metric("Mean Absolute Error", f"{metrics['mae']:.3f}")
+                    st.markdown(f"""
+                        <div style='text-align: center; font-size: 0.8em;'>
+                            Average prediction error
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                with metrics_cols[2]:
+                    st.metric("Root Mean Squared Error", f"{metrics['rmse']:.3f}")
+                    st.markdown(f"""
+                        <div style='text-align: center; font-size: 0.8em;'>
+                            Standard deviation of prediction errors
+                        </div>
+                        """, unsafe_allow_html=True)
+
+            except Exception as model_error:
+                st.error(f"Error in model training: {str(model_error)}")
+                return
+
+        # Visualization and Prediction sections
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            st.subheader("Model Visualization")
+            if metrics is not None:  # Only show plot if model is trained
+                try:
                     fig = create_plot(
-                        st.session_state.trained_models[model_key],
+                        model,
                         X[selected_features],
                         y,
                         plot_type=selected_plot,
                         raw_data=data
                     )
                     st.plotly_chart(fig, use_container_width=True)
+                except Exception as plot_error:
+                    st.error(f"Error creating plot: {str(plot_error)}")
 
-            with col2:
-                st.subheader("Model Performance")
-                if selected_features and selected_model:
-                    model = st.session_state.trained_models[model_key]
-
-                    # Display model metrics
-                    metrics = model.get_metrics()
-                    col2_1, col2_2, col2_3 = st.columns(3)
-                    with col2_1:
-                        st.metric("R² Score", f"{metrics['r2']:.3f}")
-                    with col2_2:
-                        st.metric("MAE", f"{metrics['mae']:.3f}")
-                    with col2_3:
-                        st.metric("RMSE", f"{metrics['rmse']:.3f}")
-
-                    # Prediction interface
-                    st.subheader("Make Predictions")
+        with col2:
+            st.subheader("Make Predictions")
+            if metrics is not None:  # Only show prediction interface if model is trained
+                try:
                     input_data = {}
                     for feature in selected_features:
                         input_data[feature] = st.number_input(
@@ -142,13 +182,12 @@ def main():
                             pd.DataFrame([input_data])
                         )
                         st.success(f"Predicted Profit: ${prediction[0]:,.2f}")
-
-        else:
-            st.error("Failed to load data. Please check the data source.")
+                except Exception as pred_error:
+                    st.error(f"Error making prediction: {str(pred_error)}")
 
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        st.error("Please check your data and try again.")
+        st.error(f"An unexpected error occurred: {str(e)}")
+        st.error("Please refresh the page and try again.")
 
 if __name__ == "__main__":
     main()
