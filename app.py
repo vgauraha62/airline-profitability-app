@@ -216,13 +216,56 @@ def main():
                     row=2, col=2
                 )
 
-            # Update layout
+            # Update layout with better spacing and readability
             fig.update_layout(
-                height=800,
+                height=1000,  # Increased height
                 title_text="Comprehensive Model Comparison",
                 showlegend=True,
+                template='plotly_white',
+                margin=dict(t=150),  # More space for titles
+                grid=dict(rows=2, columns=2, pattern='independent'),
+                annotations=[
+                    dict(
+                        x=ann['x'], y=ann['y'],
+                        text=ann['text'],
+                        font=dict(size=14),  # Increased font size
+                        showarrow=False,
+                        xref='paper',
+                        yref='paper',
+                        xanchor='center',
+                        yanchor='bottom'
+                    ) for ann in fig.layout.annotations
+                ]
+            )
+
+            # Update subplot spacing
+            fig.update_layout(
+                height=1000,
+                width=1200,
+                showlegend=True,
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=-0.2,
+                    xanchor="center",
+                    x=0.5
+                ),
                 template='plotly_white'
             )
+
+            # Adjust subplot margins
+            fig.update_layout(
+                margin=dict(t=150, b=150),
+                grid=dict(rows=2, columns=2, pattern='independent'),
+                subplot_titles=[
+                    '<b>Performance Metrics Comparison</b>',
+                    '<b>Feature Importance by Model</b>',
+                    '<b>Cross-validation Scores Distribution</b>',
+                    '<b>Prediction Error Distribution</b>'
+                ]
+            )
+
+
             st.plotly_chart(fig, use_container_width=True)
 
             # Detailed insights
