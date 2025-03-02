@@ -1,0 +1,596 @@
+import pandas as pd
+import requests
+import io
+
+
+
+url = "https://docs.google.com/spreadsheets/d/1eALZhnY5bEJ4uCi9BCjN2fpx8jRIzwWo/export?format=csv&gid=794923645"
+
+
+try:
+    # Download the CSV data using requests
+    response = requests.get(url)
+    response.raise_for_status()  # Raise an exception for bad responses
+
+    # Read the CSV data into a pandas DataFrame
+    data = pd.read_csv(io.StringIO(response.text))
+
+
+
+except (requests.exceptions.RequestException, pd.errors.ParserError) as e:
+
+    # Handle errors during download or parsing
+    print(f"Error: {e}")
+
+
+    data = pd.DataFrame()
+
+data
+
+print(data.columns)
+
+"""WE SEE THAT, ON AN AVERAGE, LOAD FACTOR AND FLEET AVAILIBILITY IS HIGH. WHICH IS GOOD FOR REVENUE. WITH A DECENT TURNAROUND TIME, MAINTENENCE DOWNTIME, AND AIRCRAFT UTILIZATION THE COMPANY IS RUNNING ITS OPERATIONS EXTREMELY WELL. STILL WE CAN FIND SCOPE FOR IMPROVEMENT, WHICH CAN ADD UP TO THE PROFITABILITY."""
+
+data.describe()
+
+data.info()
+
+import pandas as pd
+
+
+
+# Calculate the correlation
+correlation = data['Revenue per ASK'].corr(data['Profit (USD)'])
+
+print(f"Correlation between Revenue per ASK and Profit (USD): {correlation}")
+
+"""**there's a noticeable tendency for flights with higher revenue per available seat kilometer (ASK) to also have higher profits. This relationship is fairly strong but not absolute**"""
+
+import matplotlib.pyplot as plt
+
+
+
+# scatter plot
+plt.figure(figsize=(8, 6))
+plt.scatter(data['Revenue per ASK'], data['Profit (USD)'])
+plt.title('Revenue per ASK vs. Profit (USD)')
+plt.xlabel('Revenue per ASK')
+plt.ylabel('Profit (USD)')
+plt.grid(True)
+
+
+plt.show()
+
+#plot correlation matrix
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# drop flight number
+# Drop unnecessary columns
+data = data.drop(columns=['Flight Number', 'Scheduled Departure Time', 'Actual Departure Time'], errors='ignore')
+
+#Revenue - Operating Cost
+data['Real Revenue'] = data['Revenue (USD)'] - data['Operating Cost (USD)']
+data['Load Utilization'] = data['Load Factor (%)'] * data['Aircraft Utilization (Hours/Day)']
+
+# Calculate the correlation matrix
+correlation_matrix = data.corr()
+
+# Plotting the heatmap
+plt.figure(figsize=(12, 10))  # Adjust figure size if needed
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title("Correlation Matrix")
+plt.show()
+
+data.info()
+
+data=data.fillna(data.median())
+
+print(data.describe())
+sns.pairplot(data)
+plt.show()
+
+data.info()
+
+#TEST FEATURES
+data['Profit per ASK'] = data['Revenue per ASK'] - data['Cost per ASK']
+
+data['Ancillary_Revenue_Ratio'] = data['Ancillary Revenue (USD)'] / data['Revenue (USD)']
+
+"""WE ADD THESE 2 FEATURES, PROFIT PER ASK AND ANCILLARY_REVENUE_RATIO. ANCILLARY_REVENUE_RATIO GIVES IDEA ABOUT REVENUE'S SHARE WITH ANCILLARY ACTIVITIES LIKE LUGGAGE TRANSPORT."""
+
+# TEST FEATURES
+data['Profit per ASK'] = data['Revenue per ASK'] - data['Cost per ASK']
+
+data['Ancillary_Revenue_Ratio'] = data['Ancillary Revenue (USD)'] / data['Revenue (USD)']
+
+# scatter plot
+plt.figure(figsize=(8, 6))
+plt.scatter(data['Profit per ASK'], data['Profit (USD)'])
+plt.title('Profit per ASK vs. Profit (USD)')
+plt.xlabel('Profit per ASK')
+plt.ylabel('Profit (USD)')
+plt.grid(True)
+
+
+plt.show()
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+data['Ancillary_Revenue_Ratio'], data['Revenue (USD)']
+plt.figure(figsize=(8, 6))
+plt.scatter(data['Ancillary_Revenue_Ratio'], data['Revenue (USD)'])
+plt.title('Ancillary_Revenue_Ratio vs. Revenue (USD)')
+plt.xlabel('Ancillary_Revenue_Ratio')
+plt.ylabel('Revenue (USD)')
+plt.grid(True)
+plt.show()
+
+# features (X) and target (y)
+X = data[['Profit per ASK']]
+#X = data[['Operating Cost (USD)', 'Ancillary_Revenue_Ratio',  'Debt-to-Equity Ratio']]
+#X = data[['Ancillary Revenue (USD)', 'Load Factor (%)', 'Operating Cost (USD)', 'Fleet Availability (%)', 'Fuel Efficiency (ASK)', '']]  # features
+y = data['Profit (USD)']  # target variable
+
+"""MULTI COLLINEARITY IN FEATURE VARIABLE?"""
+
+import pandas as pd
+
+# correlation to see if feature variables have multi collinearity
+correlation_matrix = X.corr()
+print(correlation_matrix)
+# matrix plot
+plt.figure(figsize=(8, 6))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title("Correlation Matrix")
+plt.show()
+
+"""**there is no multi collinearity to be found between feature variables**
+
+**LINEAR REGRESSION AND EVALUATION METRICS. WE USE LINEAR REGRESSION FOR SIMPLICITY, NUMERICAL VALUES IN DATASET, BETTER UNDERSTANDING.**
+"""
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
+
+
+
+
+# split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+from sklearn.preprocessing import StandardScaler
+
+# scaling variables
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# create and train the Linear Regression model
+model = LinearRegression()
+model.fit(X_train_scaled, y_train)
+
+# predictions on the test set
+y_pred = model.predict(X_test_scaled)
+
+# evaluate the model
+mse = mean_squared_error(y_test, y_pred)
+rmse = np.sqrt(mse)
+r2 = r2_score(y_test, y_pred)
+
+print(f"Mean Squared Error (MSE): {mse}")
+print(f"R-squared (R2): {r2}")
+print(f"Root Mean Squared Error (RMSE): {rmse}")
+
+import shap
+
+
+# Explain the model's predictions using SHAP values
+explainer = shap.Explainer(model, X_train_scaled) # Create the SHAP explainer
+shap_values = explainer(X_test_scaled) # Calculate SHAP values for the test set
+
+
+# Visualize the SHAP values
+shap.summary_plot(shap_values, X_test)
+
+# predictions vs. actual values
+plt.scatter(y_test, y_pred, color='blue', label='Actual')
+plt.plot(y_test, y_pred, color='red', label='Predictions')
+plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='black', linestyle='--', label='Perfect Prediction')
+plt.xlabel('Profit per ASK and Ancillary_Revenue_Ratio')
+plt.ylabel('Profit (USD) and Revenue (USD)')
+plt.title('Linear Regression Model')
+plt.legend()
+plt.show()
+
+plt.tight_layout()
+
+plt.figure(figsize=(10, 6))
+for i in range(X_test_scaled.shape[1]):
+    plt.scatter(X_test_scaled[:, i], y_pred, label=f'Feature {i+1}')
+plt.xlabel('Scaled Features')
+plt.ylabel('Predicted Profit (USD)')
+plt.title('Scaled Features vs Predicted Profit')
+plt.legend()
+plt.show()
+
+"""1 dimensional ARRAYS as OUTPUT
+
+
+"""
+
+
+
+y_pred
+
+X_test_scaled, X_train_scaled
+
+y_pred = pd.DataFrame(y_pred, columns=['Profit (USD)', 'Revenue (USD)'])
+y_test = pd.DataFrame(y_test, columns=['Profit (USD)', 'Revenue (USD)'])
+
+
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.scatter(y_test['Profit (USD)'], y_pred['Profit (USD)'])
+plt.title('Profit (USD) vs. Predicted Profit (USD)')
+plt.xlabel('Actual Profit (USD)')
+plt.ylabel('Predicted Profit (USD)')
+
+plt.subplot(1, 2, 2)
+plt.scatter(y_test['Revenue (USD)'], y_pred['Revenue (USD)'])
+plt.title('Revenue (USD) vs. Predicted Revenue (USD)')
+plt.xlabel('Actual Revenue (USD)')
+plt.ylabel('Predicted Revenue (USD)')
+
+plt.tight_layout()
+plt.show()
+
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import cross_val_score, KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import mean_squared_error, r2_score
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+
+
+
+
+pipeline = make_pipeline(StandardScaler(), LinearRegression())
+
+# number of folds for cross-validation
+kf = KFold(n_splits=5, shuffle=True, random_state=42)
+
+# cross-validation
+scores = cross_val_score(pipeline, X, y, cv=kf, scoring='neg_mean_squared_error')
+
+# average MSE and RMSE
+avg_mse = -scores.mean()
+avg_rmse = np.sqrt(avg_mse)
+print(f'Average MSE: {avg_mse}')
+print(f'Average RMSE: {avg_rmse}')
+
+# cross-validation for R-squared
+r2_scores = cross_val_score(pipeline, X, y, cv=kf, scoring='r2')
+
+# average R-squared
+avg_r2 = r2_scores.mean()
+print(f'Average R-squared: {avg_r2}')
+
+# results plot
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+sns.histplot(scores, bins=10, kde=True)
+plt.title('Distribution of MSE Scores')
+plt.xlabel('MSE')
+plt.ylabel('Frequency')
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# calc residuals
+residuals = y_test - y_pred
+
+# residual plots
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+sns.scatterplot(x=y_test['Profit (USD)'], y=residuals['Profit (USD)'])
+plt.title('Residual Plot for Profit (USD)')
+plt.xlabel('Actual Profit (USD)')
+plt.ylabel('Residuals')
+
+plt.subplot(1, 2, 2)
+sns.scatterplot(x=y_test['Revenue (USD)'], y=residuals['Revenue (USD)'])
+plt.title('Residual Plot for Revenue (USD)')
+plt.xlabel('Actual Revenue (USD)')
+plt.ylabel('Residuals')
+
+plt.tight_layout()
+plt.show()
+
+"""**R2 GIVES MODEL ACCURACY WHICH IS NEARLY 78%**"""
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+
+# calc RSE (Residual Standard Error)
+rse = np.sqrt(mse / (len(y_test) - 2))  # Adjust degrees of freedom if necessary
+
+# bar chart
+metrics = ['RMSE', 'RSE', 'R2']
+values = [rmse, rse, r2]
+
+plt.figure(figsize=(8, 6))
+plt.bar(metrics, values, color=['blue', 'green', 'red'])
+plt.title('Regression Model Performance Metrics')
+plt.ylabel('Value')
+plt.xlabel('Metric')
+plt.ylim(0, max(values) * 1.1)  # Adjust y-axis limit for better visualization
+
+# adding value labels on top of the bars
+for i, v in enumerate(values):
+    plt.text(i, v, f'{v:.2f}', ha='center', va='bottom', fontweight='bold')
+
+plt.tight_layout()
+plt.show()
+
+"""**SLIPS THAT WE FIND IN PROFIT VS REVENUE**"""
+
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(8, 6))
+plt.scatter(data['Revenue (USD)'], data['Profit (USD)'],
+            c=data['Profit (USD)'] < 0, cmap='coolwarm')  # Color by negative profit
+plt.title('Revenue vs. Profit (Color-Coded by Negative Profit)')
+plt.xlabel('Revenue (USD)')
+plt.ylabel('Profit (USD)')
+plt.colorbar(label='Negative Profit')  # Add a colorbar
+plt.grid(True)
+plt.show()
+
+"""WE FIND FLIGHTS THAT SHOW NEGATIVE PROFIT, YET THE REVENUE OBTAINED WITH THEM IS POSITIVE. ANCILLARY REVENUES, OPERATION COSTS WITH THEM NEEDS TO BE ANALYSED."""
+
+import matplotlib.pyplot as plt
+
+# flights with negative profit
+negative_profit_data = data[data['Profit (USD)'] < 0]
+plt.figure(figsize=(8, 6))
+plt.scatter(negative_profit_data['Revenue (USD)'], negative_profit_data['Profit (USD)'])
+plt.title('Revenue vs. Profit (Flights with Negative Profit)')
+plt.xlabel('Revenue (USD)')
+plt.ylabel('Profit (USD)')
+plt.grid(True)
+plt.show()
+
+print(data.columns)
+
+"""**OPTIMIZATION INSIGHTS**
+
+**INSIGHTS RELATED TO DELAY**
+
+Operational improvements: Based on the insights, implement changes to address the root causes of delays, such as:
+Adjusting schedules to avoid peak periods or congested routes.
+Optimizing turnaround procedures to minimize ground time.
+Implementing preventive maintenance strategies to reduce aircraft downtime.
+Proactive communication with passengers about potential delays.
+"""
+
+average_delay = data['Delay (Minutes)'].mean()
+print(f"Average Delay: {average_delay} minutes")
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.figure(figsize=(10, 6))
+sns.histplot(data['Delay (Minutes)'], bins=30, kde=True)
+plt.title('Distribution of Delay (Minutes)')
+plt.xlabel('Delay (Minutes)')
+plt.ylabel('Frequency')
+plt.show()
+
+# Load the original dataset again or create a copy before dropping columns
+data = pd.read_csv('/content/Aviation_KPIs_Dataset.xlsx - Sheet1.csv')
+# Now use data for this part of the code:
+data['Departure Hour'] = pd.to_datetime(data['Scheduled Departure Time']).dt.hour
+
+plt.figure(figsize=(12, 6))
+sns.boxplot(x='Departure Hour', y='Delay (Minutes)', data=data)
+plt.title('Delay (Minutes) by Departure Hour')
+plt.xlabel('Departure Hour')
+plt.ylabel('Delay (Minutes)')
+plt.show()
+
+# Correlation with Aircraft Utilization
+delay_utilization_corr = data['Delay (Minutes)'].corr(data['Aircraft Utilization (Hours/Day)'])
+print(f"Correlation between Delay and Aircraft Utilization: {delay_utilization_corr}")
+
+# Correlation with Turnaround Time
+delay_turnaround_corr = data['Delay (Minutes)'].corr(data['Turnaround Time (Minutes)'])
+print(f"Correlation between Delay and Turnaround Time: {delay_turnaround_corr}")
+
+"""RELOAD DATASET, CAUSE WE DROPPED IMPORTANT TIME DATA PREVIOUSLY"""
+
+import pandas as pd
+import requests
+import io
+
+
+
+url = "https://docs.google.com/spreadsheets/d/1eALZhnY5bEJ4uCi9BCjN2fpx8jRIzwWo/export?format=csv&gid=794923645"
+
+
+try:
+    # Download the CSV data using requests
+    response = requests.get(url)
+    response.raise_for_status()  # Raise an exception for bad responses
+
+    # Read the CSV data into a pandas DataFrame
+    data = pd.read_csv(io.StringIO(response.text))
+
+
+
+except (requests.exceptions.RequestException, pd.errors.ParserError) as e:
+
+    # Handle errors during download or parsing
+    print(f"Error: {e}")
+
+
+    data = pd.DataFrame()
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+
+# time columns to datetime objects
+data['Scheduled Departure Time'] = pd.to_datetime(data['Scheduled Departure Time'])
+data['Actual Departure Time'] = pd.to_datetime(data['Actual Departure Time'])
+
+# calculate delay in minutes
+data['Delay (Minutes)'] = (data['Actual Departure Time'] - data['Scheduled Departure Time']).dt.total_seconds() / 60
+
+#  create delay flag
+delay_threshold = 15
+data['Is_Delayed'] = data['Delay (Minutes)'] > delay_threshold
+
+# delay by flight number
+delay_frequency = data.groupby('Flight Number')['Is_Delayed'].mean() * 100
+print("Delay Frequency by Flight Number:")
+print(delay_frequency)
+plt.figure(figsize=(12, 6))
+sns.barplot(x=delay_frequency.index, y=delay_frequency.values)
+plt.title('Delay Frequency by Flight Number')
+plt.xlabel('Flight Number')
+plt.ylabel('Delay Frequency (%)')
+plt.show()
+
+# delay frequency by departure hour
+data['Departure Hour'] = data['Scheduled Departure Time'].dt.hour
+hourly_delay_frequency = data.groupby('Departure Hour')['Is_Delayed'].mean() * 100
+print("\nDelay Frequency by Departure Hour:")
+print(hourly_delay_frequency)
+
+
+plt.figure(figsize=(12, 6))
+sns.barplot(x=hourly_delay_frequency.index, y=hourly_delay_frequency.values)
+plt.title('Delay Frequency by Departure Hour')
+plt.xlabel('Departure Hour')
+plt.ylabel('Delay Frequency (%)')
+plt.show()
+
+# delay patterns by day number of week
+
+data['Day of Week'] = data['Scheduled Departure Time'].dt.dayofweek  # 0: Monday, 6: Sunday
+daily_delay_frequency = data.groupby('Day of Week')['Is_Delayed'].mean() * 100
+print("\nDelay Frequency by Day of Week:")
+print(daily_delay_frequency)
+
+"""BY USING LINEAR REGRESSION, WE TRY TO ANALYZE IF DELAY IS IMPACTED BY AIRCRAFT UTILIZATION TIME AND TURNAROUND TIME. HIGH MSE AND RMSE VALUES SUGGEST OVERFITTING OF THE DATA, HENCE WE CAN SAFELY ASSUME THAT THEY DO NOT ADD UP TO DELAY."""
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression  # Or other regression models
+from sklearn.metrics import mean_squared_error
+import numpy as np
+
+
+# Select features and target
+X = data[['Aircraft Utilization (Hours/Day)', 'Turnaround Time (Minutes)']]  # Choose relevant features
+y = data['Delay (Minutes)']
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate model
+mse = mean_squared_error(y_test, y_pred)
+print(f"Mean Squared Error: {mse}")
+
+rmse=np.sqrt(mse)
+print(f"Root Mean Squared Error: {rmse}")
+
+"""**Financial Metrics for OPTIMIZATION**"""
+
+average_debt_to_equity = data['Debt-to-Equity Ratio'].mean()
+print(f"Average Debt-to-Equity Ratio: {average_debt_to_equity}")
+
+"""PERSISTENTLY high DEBT TO EQUITY RATIO, SHOULD BE REDUCED TO SEE AN INCREASE IN REVENUE"""
+
+import matplotlib.pyplot as plt
+
+import pandas as pd
+
+
+
+# Convert the 'Scheduled Departure Time' column to datetime objects
+data['Scheduled Departure Time'] = pd.to_datetime(data['Scheduled Departure Time'])
+
+# Extract the date component and create a new column called 'Date'
+data['Date'] = data['Scheduled Departure Time'].dt.date
+
+
+plt.plot(data['Date'], data['Debt-to-Equity Ratio'])
+plt.figure(figsize=(12, 6))
+plt.title('Debt-to-Equity Ratio Over Time')
+plt.xlabel('Date')
+plt.ylabel('Debt-to-Equity Ratio')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Calculate the correlation between Load Factor and Profit
+load_factor_profit_corr = data['Load Factor (%)'].corr(data['Profit (USD)'])
+print(f"Correlation between Load Factor and Profit: {load_factor_profit_corr}")
+
+# Create a correlation matrix for Load Factor and other relevant metrics
+relevant_metrics = ['Load Factor (%)', 'Revenue (USD)', 'Operating Cost (USD)',
+                   'Net Profit Margin (%)', 'Fuel Efficiency (ASK)',
+                   'Aircraft Utilization (Hours/Day)', 'Turnaround Time (Minutes)', 'Profit (USD)', 'Ancillary Revenue (USD)']
+correlation_matrix = data[relevant_metrics].corr()
+
+# Visualize the correlation matrix
+plt.figure(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title("Correlation Matrix of Load Factor and Other Metrics")
+plt.show()
+
+correlation = data['Load Factor (%)'].corr(data['Fuel Efficiency (ASK)'])
+print(f"Correlation between Load Factor and Fuel Efficiency (ASK): {correlation}")
+
+# load factor vs. profit
+plt.figure(figsize=(8, 6))
+sns.scatterplot(x='Load Factor (%)', y='Profit (USD)', data=data)
+plt.title('Load Factor vs. Profit')
+plt.xlabel('Load Factor (%)')
+plt.ylabel('Profit (USD)')
+plt.show()
+
+data['Load_Fuel_Efficiency'] = data['Load Factor (%)'] * data['Fuel Efficiency (ASK)']
+
+correlation = data['Load_Fuel_Efficiency'].corr(data['Profit (USD)'])
+print(f"Correlation between Load_Fuel_Efficiency and Profitability: {correlation}")

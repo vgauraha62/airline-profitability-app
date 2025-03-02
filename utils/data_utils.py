@@ -1,50 +1,68 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+import requests
+import io
 
 def load_data():
     """
-    Load the aviation revenue dataset.
-    Replace this with actual data loading logic.
+    Load the aviation revenue dataset from Google Sheets.
     """
-    # Example data generation for demonstration
-    np.random.seed(42)
-    n_samples = 1000
-    
-    data = pd.DataFrame({
-        'passengers': np.random.normal(1000, 200, n_samples),
-        'distance': np.random.normal(1500, 300, n_samples),
-        'fuel_cost': np.random.normal(500, 100, n_samples),
-        'season_factor': np.random.uniform(0.8, 1.2, n_samples),
-        'competitor_price': np.random.normal(300, 50, n_samples),
-        'revenue': None
-    })
-    
-    # Generate revenue with some realistic relationship
-    data['revenue'] = (
-        2 * data['passengers'] +
-        0.1 * data['distance'] +
-        0.5 * data['fuel_cost'] +
-        1000 * data['season_factor'] +
-        1.5 * data['competitor_price'] +
-        np.random.normal(0, 1000, n_samples)
-    )
-    
-    return data
+    url = "https://docs.google.com/spreadsheets/d/1eALZhnY5bEJ4uCi9BCjN2fpx8jRIzwWo/export?format=csv&gid=794923645"
+
+    try:
+        # Download the CSV data using requests
+        response = requests.get(url)
+        response.raise_for_status()
+
+        # Read the CSV data into a pandas DataFrame
+        data = pd.read_csv(io.StringIO(response.text))
+
+        # Add derived features
+        data['Load_Fuel_Efficiency'] = data['Load Factor (%)'] * data['Fuel Efficiency (ASK)']
+        data['Profit per ASK'] = data['Revenue per ASK'] - data['Cost per ASK']
+        data['Ancillary_Revenue_Ratio'] = data['Ancillary Revenue (USD)'] / data['Revenue (USD)']
+
+        # Drop unnecessary columns
+        data = data.drop(columns=['Flight Number', 'Scheduled Departure Time', 'Actual Departure Time'], errors='ignore')
+
+        # Fill missing values
+        data = data.fillna(data.median())
+
+        return data
+
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        return None
 
 def preprocess_data(data):
     """
     Preprocess the data for model training.
     """
+    if data is None:
+        raise ValueError("No data available for preprocessing")
+
     # Separate features and target
-    X = data.drop('revenue', axis=1)
-    y = data['revenue']
-    
+    target_col = 'Profit (USD)'
+    feature_cols = [
+        'Load Factor (%)',
+        'Revenue per ASK',
+        'Cost per ASK',
+        'Fuel Efficiency (ASK)',
+        'Aircraft Utilization (Hours/Day)',
+        'Load_Fuel_Efficiency',
+        'Profit per ASK',
+        'Ancillary_Revenue_Ratio'
+    ]
+
+    X = data[feature_cols]
+    y = data[target_col]
+
     # Scale the features
     scaler = StandardScaler()
     X_scaled = pd.DataFrame(
         scaler.fit_transform(X),
         columns=X.columns
     )
-    
+
     return X_scaled, y
