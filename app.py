@@ -172,7 +172,9 @@ def main():
                     'Feature Importance by Model',
                     'Cross-validation Scores Distribution',
                     'Prediction Error Distribution'
-                )
+                ),
+                vertical_spacing=0.2,  # Increased spacing between rows
+                horizontal_spacing=0.15  # Increased spacing between columns
             )
 
             # 1. Performance Metrics Bar Chart
@@ -218,52 +220,53 @@ def main():
 
             # Update layout with better spacing and readability
             fig.update_layout(
-                height=1000,  # Increased height
+                height=1200,  # Increased height
+                width=1200,  # Fixed width
                 title_text="Comprehensive Model Comparison",
                 showlegend=True,
                 template='plotly_white',
-                margin=dict(t=150),  # More space for titles
-                grid=dict(rows=2, columns=2, pattern='independent'),
+                margin=dict(
+                    t=150,  # Top margin
+                    b=100,  # Bottom margin
+                    l=100,  # Left margin
+                    r=50   # Right margin
+                ),
+                # Update subplot title font and positioning
                 annotations=[
                     dict(
-                        x=ann['x'], y=ann['y'],
+                        x=ann['x'], 
+                        y=ann['y'] + 0.05,  # Move titles up
                         text=ann['text'],
-                        font=dict(size=14),  # Increased font size
+                        font=dict(size=14, color='black', family='Arial'),
                         showarrow=False,
                         xref='paper',
                         yref='paper',
                         xanchor='center',
                         yanchor='bottom'
                     ) for ann in fig.layout.annotations
-                ]
-            )
-
-            # Update subplot spacing
-            fig.update_layout(
-                height=1000,
-                width=1200,
-                showlegend=True,
+                ],
+                # Move legend to bottom
                 legend=dict(
                     orientation="h",
                     yanchor="bottom",
                     y=-0.2,
                     xanchor="center",
                     x=0.5
-                ),
-                template='plotly_white'
+                )
             )
 
-            # Adjust subplot margins
+            # Update grid pattern
             fig.update_layout(
-                margin=dict(t=150, b=150),
-                grid=dict(rows=2, columns=2, pattern='independent'),
-                subplot_titles=[
-                    '<b>Performance Metrics Comparison</b>',
-                    '<b>Feature Importance by Model</b>',
-                    '<b>Cross-validation Scores Distribution</b>',
-                    '<b>Prediction Error Distribution</b>'
-                ]
+                grid=dict(
+                    rows=2,
+                    columns=2,
+                    pattern='independent'
+                )
             )
+
+            # Update axes labels and title fonts
+            for i in fig['layout']['annotations']:
+                i['font'] = dict(size=14, color='black', family='Arial')
 
 
             st.plotly_chart(fig, use_container_width=True)
