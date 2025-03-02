@@ -15,6 +15,18 @@ def load_data():
         response.raise_for_status()
         data = pd.read_csv(io.StringIO(response.text))
 
+        # Store original flight numbers before dropping
+        flight_numbers = data['Flight Number'].copy()
+
+        # Drop non-numeric columns temporarily
+        data = data.drop(['Flight Number', 'Scheduled Departure Time', 'Actual Departure Time'], axis=1, errors='ignore')
+
+        # Convert percentage strings to floats if needed
+        percentage_columns = ['Load Factor (%)', 'Fleet Availability (%)', 'Net Profit Margin (%)']
+        for col in percentage_columns:
+            if col in data.columns:
+                data[col] = pd.to_numeric(data[col].astype(str).str.rstrip('%'), errors='coerce')
+
         # Add derived features
         data['Load_Fuel_Efficiency'] = data['Load Factor (%)'] * data['Fuel Efficiency (ASK)']
         data['Profit per ASK'] = data['Revenue per ASK'] - data['Cost per ASK']
@@ -22,18 +34,11 @@ def load_data():
         data['Real Revenue'] = data['Revenue (USD)'] - data['Operating Cost (USD)']
         data['Load Utilization'] = data['Load Factor (%)'] * data['Aircraft Utilization (Hours/Day)']
 
-        # Process time-related data if available
-        try:
-            data['Scheduled Departure Time'] = pd.to_datetime(data['Scheduled Departure Time'])
-            data['Actual Departure Time'] = pd.to_datetime(data['Actual Departure Time'])
-            data['Delay (Minutes)'] = (data['Actual Departure Time'] - data['Scheduled Departure Time']).dt.total_seconds() / 60
-            data['Departure Hour'] = data['Scheduled Departure Time'].dt.hour
-            data['Day of Week'] = data['Scheduled Departure Time'].dt.dayofweek
-        except:
-            print("Time-related columns not available or could not be processed")
-
-        # Fill missing values
+        # Fill missing values with median
         data = data.fillna(data.median())
+
+        # Add flight numbers back if needed for reference
+        data['Flight Number'] = flight_numbers
 
         return data
 
@@ -70,8 +75,7 @@ def get_feature_groups():
         ],
         'Efficiency Metrics': [
             'Fuel Efficiency (ASK)',
-            'Load_Fuel_Efficiency',
-            'Delay (Minutes)'
+            'Load_Fuel_Efficiency'
         ]
     }
 
@@ -95,8 +99,8 @@ def preprocess_data(data):
     if target_col in feature_cols:
         feature_cols.remove(target_col)
 
-    # Keep only available columns
-    feature_cols = [col for col in feature_cols if col in data.columns]
+    # Keep only available numeric columns
+    feature_cols = [col for col in feature_cols if col in data.columns and pd.api.types.is_numeric_dtype(data[col])]
 
     X = data[feature_cols]
     y = data[target_col]
