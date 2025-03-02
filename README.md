@@ -1,45 +1,113 @@
-# Aviation Revenue ML Model Visualization
+# Analitica Global - Aviation Dataset Insights
 
-A Streamlit-based web application for visualizing and analyzing aviation revenue predictions using machine learning models. This project provides interactive visualizations of aviation metrics, model performance, and revenue predictions.
+A comprehensive machine learning application for aviation revenue prediction and model visualization, designed to provide actionable insights into aviation metrics and profitability analysis.
 
-## Features
+## 🚀 Features
 
-- **Multiple ML Models**: Support for Linear Regression, Random Forest, and XGBoost models
-- **Feature Group Analysis**: Organized feature selection by categories:
-  - Revenue Metrics
-  - Operational Metrics
-  - Financial Metrics
-  - Efficiency Metrics
+- **Advanced Model Comparison**: Compare multiple ML models (Linear Regression, Random Forest, XGBoost)
+  - Cross-validation scores and model stability analysis
+  - Feature importance comparison across models
+  - Comprehensive performance metrics visualization
+  - Error distribution and prediction accuracy analysis
+  - Model-specific strengths and weaknesses
+
 - **Interactive Visualizations**:
-  - Feature Importance
-  - Prediction vs Actual Values
-  - Residual Analysis
-  - Learning Curves
-  - Correlation Matrices
-  - Load Factor Analysis
-  - Delay Analysis
-- **Real-time Predictions**: Input custom values to get instant profit predictions
-- **Performance Metrics**: Detailed model performance visualization including R², MAE, and RMSE
+  - Revenue correlation analysis
+  - Load factor impact assessment
+  - Feature importance comparison
+  - Performance metrics dashboards
+  - Prediction error distribution
 
-## Installation
+- **Comprehensive Analytics**:
+  - Revenue Metrics (Revenue per ASK, Ancillary Revenue)
+  - Operational Metrics (Load Factor, Fleet Availability)
+  - Financial Metrics (Operating Costs, Profit Margins)
+  - Efficiency Metrics (Fuel Efficiency, Asset Utilization)
+
+- **Business Intelligence**:
+  - Automated insights generation
+  - Aviation-specific recommendations
+  - Profitability analysis
+  - Performance optimization suggestions
+
+## 🛠️ Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/aviation-revenue-ml.git
-cd aviation-revenue-ml
+git clone https://github.com/yourusername/aviation-analytics.git
+cd aviation-analytics
 ```
 
-2. Install the required packages:
+2. Create and activate a Python virtual environment (recommended):
 ```bash
-pip install -r requirements.txt
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Run the Streamlit app:
+3. Install required packages:
+```bash
+pip install streamlit==1.42.2
+pip install pandas==2.2.3
+pip install numpy==2.2.3
+pip install scikit-learn==1.6.1
+pip install xgboost==2.1.4
+pip install plotly==6.0.0
+```
+
+4. Run the application:
 ```bash
 streamlit run app.py
 ```
 
-## Project Structure
+## 📊 Model Comparison Features
+
+### Performance Metrics
+- R² Score (Model Accuracy)
+- Mean Absolute Error (MAE)
+- Root Mean Square Error (RMSE)
+- Cross-validation Scores
+- Feature Importance Rankings
+- Prediction Error Distribution
+
+### Available Models
+- Linear Regression (Baseline)
+- Random Forest (Ensemble Learning)
+- XGBoost (Gradient Boosting)
+
+### Aviation Metrics Analyzed
+- Load Factor (%)
+- Revenue per ASK
+- Operating Costs
+- Aircraft Utilization
+- Fleet Availability
+- Fuel Efficiency
+- Ancillary Revenue Ratio
+
+
+## 📈 Usage Guide
+
+1. **Data Selection**:
+   - Choose feature groups from the sidebar
+   - Select specific features for analysis
+   - Multiple feature selection supported
+
+2. **Model Analysis**:
+   - Select multiple models for comparison
+   - View comprehensive performance metrics
+   - Analyze feature importance across models
+
+3. **Visualization Options**:
+   - Performance comparison charts
+   - Feature correlation matrices
+   - Error distribution analysis
+   - Load factor impact studies
+
+4. **Export and Documentation**:
+   - Download analysis results
+   - Export predictions and metrics
+   - Save visualization plots
+
+## 🎯 Project Structure
 
 ```
 ├── app.py                 # Main Streamlit application
@@ -49,62 +117,42 @@ streamlit run app.py
 │   └── plot_utils.py     # Visualization functions
 ├── .streamlit/
 │   └── config.toml       # Streamlit configuration
-├── requirements.txt      # Project dependencies
-└── README.md            # Project documentation
 ```
 
-## Usage
+## 🤝 Contributing
 
-1. Select a feature group from the sidebar
-2. Choose specific features for analysis
-3. Select a machine learning model
-4. Choose visualization type
-5. Input custom values for predictions
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-## Data Description
-
-The application uses aviation data with the following key metrics:
-- Load Factor
-- Revenue per ASK (Available Seat Kilometer)
-- Operating Costs
-- Aircraft Utilization
-- Fleet Availability
-- Fuel Efficiency
-- And more...
-
-## Model Performance
-
-The application includes three machine learning models:
-1. **Linear Regression**: Basic linear model for revenue prediction
-2. **Random Forest**: Ensemble learning model for complex patterns
-3. **XGBoost**: Gradient boosting model for high accuracy
-
-## Docker Considerations
-
-While Docker can be used for this project, it's not strictly necessary for the following reasons:
-
-1. **Simple Dependencies**: The project uses standard Python packages that are easy to install
-2. **Streamlit Deployment**: Streamlit provides simple deployment options without containerization
-3. **Resource Efficiency**: Running without Docker reduces overhead for local development
-
-However, if you want to include Docker for consistency or deployment purposes, you can use this sample Dockerfile:
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-
-EXPOSE 5000
-CMD ["streamlit", "run", "app.py", "--server.port=5000", "--server.address=0.0.0.0"]
-```
-
-## Contributing
-
-Feel free to submit issues, fork the repository, and create pull requests for any improvements.
-
-## License
+## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🛫 Production Deployment
+
+This application can be deployed using:
+1. **Streamlit Cloud** (Recommended):
+   - Easy deployment with direct GitHub integration
+   - Automatic updates with repository changes
+   - Free tier available for personal projects
+
+2. **Local Server**:
+   - Run using Streamlit's built-in server
+   - Accessible via localhost:5000
+   - Suitable for development and testing
+
+Docker containerization is optional but can be useful for consistent deployment environments.
+
+## ✨ Future Enhancements
+
+- Additional machine learning models
+- Real-time data integration
+- Advanced feature engineering
+- Custom model parameter tuning
+- Automated report generation
+- Time series analysis capabilities
+
+## 📚 Resources
+
+- [Streamlit Documentation](https://docs.streamlit.io/)
+- [Scikit-learn Documentation](https://scikit-learn.org/stable/)
+- [XGBoost Documentation](https://xgboost.readthedocs.io/)
