@@ -13,12 +13,16 @@ def create_plot(model, X, y, plot_type, raw_data=None):
         return plot_residuals(model, X, y)
     elif plot_type == "Learning Curve":
         return plot_learning_curve(model, X, y)
-    elif plot_type == "Correlation Matrix":
-        return plot_correlation_matrix(raw_data)
-    elif plot_type == "Load Factor vs Profit":
-        return plot_load_factor_profit(raw_data)
-    elif plot_type == "Revenue Metrics":
-        return plot_revenue_metrics(raw_data)
+    elif plot_type == "Performance Metrics":
+        return plot_performance_metrics(model, X, y)
+    elif plot_type == "Feature Correlation Matrix":
+        return plot_feature_correlation(raw_data)
+    elif plot_type == "Revenue Correlation":
+        return plot_revenue_correlation(raw_data)
+    elif plot_type == "Load Factor Analysis":
+        return plot_load_factor_analysis(raw_data)
+    elif plot_type == "Delay Analysis":
+        return plot_delay_analysis(raw_data)
 
 def plot_feature_importance(model, X):
     if hasattr(model.model, 'feature_importances_'):
@@ -36,6 +40,126 @@ def plot_feature_importance(model, X):
         title='Feature Importance',
         xaxis_title='Features',
         yaxis_title='Importance Score',
+        template='plotly_white'
+    )
+    return fig
+
+def plot_performance_metrics(model, X, y):
+    metrics = model.get_metrics()
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=['R² Score', 'MAE', 'RMSE'],
+        y=[metrics['r2'], metrics['mae'], metrics['rmse']],
+        text=[f"{v:.3f}" for v in [metrics['r2'], metrics['mae'], metrics['rmse']]],
+        textposition='auto'
+    ))
+
+    fig.update_layout(
+        title='Model Performance Metrics',
+        xaxis_title='Metric',
+        yaxis_title='Value',
+        template='plotly_white'
+    )
+    return fig
+
+def plot_feature_correlation(data):
+    # Select numerical columns only
+    num_cols = data.select_dtypes(include=[np.number]).columns
+    corr_matrix = data[num_cols].corr()
+
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.columns,
+        colorscale='RdBu',
+        zmin=-1,
+        zmax=1
+    ))
+
+    fig.update_layout(
+        title='Feature Correlation Matrix',
+        width=900,
+        height=900,
+        template='plotly_white'
+    )
+    return fig
+
+def plot_revenue_correlation(data):
+    revenue_cols = [
+        'Revenue (USD)', 
+        'Revenue per ASK', 
+        'Ancillary Revenue (USD)',
+        'Operating Cost (USD)',
+        'Profit (USD)',
+        'Net Profit Margin (%)'
+    ]
+
+    corr_matrix = data[revenue_cols].corr()
+
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.columns,
+        colorscale='RdBu',
+        zmin=-1,
+        zmax=1
+    ))
+
+    fig.update_layout(
+        title='Revenue Metrics Correlation',
+        width=800,
+        height=800,
+        template='plotly_white'
+    )
+    return fig
+
+def plot_load_factor_analysis(data):
+    fig = go.Figure()
+
+    # Load Factor vs Profit
+    fig.add_trace(go.Scatter(
+        x=data['Load Factor (%)'],
+        y=data['Profit (USD)'],
+        mode='markers',
+        name='Load Factor vs Profit'
+    ))
+
+    # Add trend line
+    z = np.polyfit(data['Load Factor (%)'], data['Profit (USD)'], 1)
+    p = np.poly1d(z)
+    fig.add_trace(go.Scatter(
+        x=data['Load Factor (%)'],
+        y=p(data['Load Factor (%)']),
+        mode='lines',
+        name='Trend Line'
+    ))
+
+    fig.update_layout(
+        title='Load Factor vs Profit Analysis',
+        xaxis_title='Load Factor (%)',
+        yaxis_title='Profit (USD)',
+        template='plotly_white'
+    )
+    return fig
+
+def plot_delay_analysis(data):
+    if 'Delay (Minutes)' not in data.columns:
+        return go.Figure()
+
+    fig = go.Figure()
+
+    # Delay distribution
+    fig.add_trace(go.Histogram(
+        x=data['Delay (Minutes)'],
+        nbinsx=30,
+        name='Delay Distribution'
+    ))
+
+    fig.update_layout(
+        title='Flight Delay Distribution',
+        xaxis_title='Delay (Minutes)',
+        yaxis_title='Frequency',
         template='plotly_white'
     )
     return fig
@@ -66,60 +190,6 @@ def plot_prediction_vs_actual(model, X, y):
         title='Predicted vs Actual Values',
         xaxis_title='Actual Values',
         yaxis_title='Predicted Values',
-        template='plotly_white'
-    )
-    return fig
-
-def plot_correlation_matrix(data):
-    corr_matrix = data.corr()
-
-    fig = go.Figure(data=go.Heatmap(
-        z=corr_matrix.values,
-        x=corr_matrix.columns,
-        y=corr_matrix.columns,
-        colorscale='RdBu',
-        zmin=-1,
-        zmax=1
-    ))
-
-    fig.update_layout(
-        title='Correlation Matrix',
-        width=800,
-        height=800,
-        template='plotly_white'
-    )
-    return fig
-
-def plot_load_factor_profit(data):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=data['Load Factor (%)'],
-        y=data['Profit (USD)'],
-        mode='markers',
-        name='Data Points'
-    ))
-
-    fig.update_layout(
-        title='Load Factor vs Profit',
-        xaxis_title='Load Factor (%)',
-        yaxis_title='Profit (USD)',
-        template='plotly_white'
-    )
-    return fig
-
-def plot_revenue_metrics(data):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=data['Revenue per ASK'],
-        y=data['Profit (USD)'],
-        mode='markers',
-        name='Revenue per ASK vs Profit'
-    ))
-
-    fig.update_layout(
-        title='Revenue Metrics Analysis',
-        xaxis_title='Revenue per ASK',
-        yaxis_title='Profit (USD)',
         template='plotly_white'
     )
     return fig

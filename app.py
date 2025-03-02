@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from utils.model_utils import initialize_models, train_model, predict
 from utils.plot_utils import create_plot
-from utils.data_utils import load_data, preprocess_data
+from utils.data_utils import load_data, preprocess_data, get_feature_groups
 
 # Page configuration
 st.set_page_config(
@@ -28,7 +28,6 @@ def main():
     # Sidebar
     st.sidebar.header("Configuration")
 
-    # Load and preprocess data
     try:
         if st.session_state.raw_data is None:
             with st.spinner("Loading data..."):
@@ -39,8 +38,18 @@ def main():
         if data is not None:
             X, y = preprocess_data(data)
 
-            # Feature selection
-            available_features = X.columns.tolist()
+            # Feature group selection
+            feature_groups = get_feature_groups()
+            selected_group = st.sidebar.selectbox(
+                "Select Feature Group",
+                ["All Features"] + list(feature_groups.keys())
+            )
+
+            if selected_group == "All Features":
+                available_features = X.columns.tolist()
+            else:
+                available_features = [f for f in feature_groups[selected_group] if f in X.columns]
+
             selected_features = st.sidebar.multiselect(
                 "Select Features",
                 available_features,
@@ -64,9 +73,11 @@ def main():
                 "Prediction vs Actual",
                 "Residual Plot",
                 "Learning Curve",
-                "Correlation Matrix",
-                "Load Factor vs Profit",
-                "Revenue Metrics"
+                "Performance Metrics",
+                "Feature Correlation Matrix",
+                "Revenue Correlation",
+                "Load Factor Analysis",
+                "Delay Analysis"
             ]
             selected_plot = st.sidebar.selectbox(
                 "Select Plot Type",
@@ -80,18 +91,19 @@ def main():
                 st.subheader("Model Visualization")
                 if selected_features and selected_model:
                     # Train model if needed
-                    if model_options[selected_model] not in st.session_state.trained_models:
+                    model_key = f"{model_options[selected_model]}_{','.join(selected_features)}"
+                    if model_key not in st.session_state.trained_models:
                         with st.spinner("Training model..."):
                             model = train_model(
                                 X[selected_features],
                                 y,
                                 model_type=model_options[selected_model]
                             )
-                            st.session_state.trained_models[model_options[selected_model]] = model
+                            st.session_state.trained_models[model_key] = model
 
                     # Create and display plot
                     fig = create_plot(
-                        st.session_state.trained_models[model_options[selected_model]],
+                        st.session_state.trained_models[model_key],
                         X[selected_features],
                         y,
                         plot_type=selected_plot,
@@ -102,13 +114,17 @@ def main():
             with col2:
                 st.subheader("Model Performance")
                 if selected_features and selected_model:
-                    model = st.session_state.trained_models[model_options[selected_model]]
+                    model = st.session_state.trained_models[model_key]
 
                     # Display model metrics
                     metrics = model.get_metrics()
-                    st.metric("R² Score", f"{metrics['r2']:.3f}")
-                    st.metric("MAE", f"{metrics['mae']:.3f}")
-                    st.metric("RMSE", f"{metrics['rmse']:.3f}")
+                    col2_1, col2_2, col2_3 = st.columns(3)
+                    with col2_1:
+                        st.metric("R² Score", f"{metrics['r2']:.3f}")
+                    with col2_2:
+                        st.metric("MAE", f"{metrics['mae']:.3f}")
+                    with col2_3:
+                        st.metric("RMSE", f"{metrics['rmse']:.3f}")
 
                     # Prediction interface
                     st.subheader("Make Predictions")
@@ -125,7 +141,7 @@ def main():
                             model,
                             pd.DataFrame([input_data])
                         )
-                        st.success(f"Predicted Revenue: ${prediction[0]:,.2f}")
+                        st.success(f"Predicted Profit: ${prediction[0]:,.2f}")
 
         else:
             st.error("Failed to load data. Please check the data source.")
